@@ -9,6 +9,7 @@ var vm = {
     repository_ref: null,
     shortcuts_project: null,
     nodesLimit: 10000,
+    isResultGTNodesLimit: false,
     /* default setting */
     setting: {
         toggle: true,
@@ -108,11 +109,13 @@ var vm = {
 
         $.get(vm.apiRepoTree, param, function (result) {
             var treeArr = [];
-            var currentPath = $("#path").val();   // 当前打开的文件路径
-            vm.setting.recursive = result && (result.length < vm.nodesLimit);  // 大于node限制的不用递归展示
+            var currentPath = $("#path").val();                                // 当前打开的文件路径
 
             if(result && (result.length > vm.nodesLimit)) {
-                console.warn('GitLab Tree: 文件数量超过' + vm.nodesLimit + ',改为分步渲染')
+                vm.isResultGTNodesLimit = true;
+                console.warn('GitLab Tree: 文件数量超过' + vm.nodesLimit);
+                vm.hideTree();
+                return false;
             }
 
             if (result) {
@@ -129,10 +132,24 @@ var vm = {
                     if (path_fragments.length === 1) { // root level
                         treeArr[path_fragments[0]] = node;
                         treeArr.push(node);
-                    } else { // sub level
-                        if(!vm.setting.recursive && !~currentPath.indexOf(node.path)) {
-                            continue;
-                        }
+                    } else { 
+                        // sub level
+                        // if(vm.isResultGTNodesLimit && !~currentPath.indexOf(node.path)) {
+                        //     continue;
+                        // }
+
+                        // if(vm.isResultGTNodesLimit) {
+                        //     debugger
+                        //     // 当前的查看文件不在根目录下
+                        //     if(currentPath.split('/').length > 1) {
+                        //         if(node.path.indexOf(currentPath.split('/')[0]) !== 0) {
+                        //             continue
+                        //         }
+                        //     } else {
+                        //         continue;
+                        //     }
+                        // }
+
                         var parent = treeArr[path_fragments[0]];
                         for (var j = 1; j < path_fragments.length - 1; j++) {
                             parent = parent.children_map[path_fragments[j]];
@@ -142,6 +159,9 @@ var vm = {
                     }
                 }
             }
+
+            debugger
+
             var selectNodeId = vm.openCurrentPathAndReturnNodeId(treeArr);
             var ztree = vm.getZTree();
             ztree.addNodes(null, i, treeArr);
