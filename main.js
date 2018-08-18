@@ -8,6 +8,7 @@ var vm = {
     project_id: null,
     repository_ref: null,
     shortcuts_project: null,
+    nodesLimit: 10000,
     /* default setting */
     setting: {
         toggle: true,
@@ -107,6 +108,12 @@ var vm = {
 
         $.get(vm.apiRepoTree, param, function (result) {
             var treeArr = [];
+            var currentPath = $("#path").val();   // 当前打开的文件路径
+            vm.setting.recursive = result && (result.length < vm.nodesLimit);  // 大于node限制的不用递归展示
+
+            if(result && (result.length > vm.nodesLimit)) {
+                console.warn('GitLab Tree: 文件数量超过' + vm.nodesLimit + ',改为分步渲染')
+            }
 
             if (result) {
                 // Convert the response data to another structure which can be accepted by ztree.
@@ -123,6 +130,9 @@ var vm = {
                         treeArr[path_fragments[0]] = node;
                         treeArr.push(node);
                     } else { // sub level
+                        if(!vm.setting.recursive && !~currentPath.indexOf(node.path)) {
+                            continue;
+                        }
                         var parent = treeArr[path_fragments[0]];
                         for (var j = 1; j < path_fragments.length - 1; j++) {
                             parent = parent.children_map[path_fragments[j]];
@@ -460,7 +470,6 @@ var vm = {
         });
 
         vm.initTree();
-
         if (vm.setting.recursive) {
             vm.loadRecursiveNode();
         } else {
